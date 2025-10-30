@@ -1,21 +1,38 @@
-@echo off
-echo ================================
-echo Running ApigeeLint and pushing to GitHub
-echo ================================
+@echo on
+setlocal enabledelayedexpansion
 
-:: Step 1 - Run ApigeeLint
-apigeelint -s "C:\Users\sanketfarde\Downloads\IXC-MH-Outbound_rev70_2025_10_15" -f json.js -q -w "C:\Users\sanketfarde\ApigeeLint\JsonFile\IXC-MH-Outbound-results.json"
+echo ======================================
+echo DEBUG MODE: Running ApigeeLint and pushing to GitHub
+echo ======================================
 
-:: Step 2 - Convert JSON to Excel
+set JSONFILE=C:\Users\sanketfarde\ApigeeLint\JsonFile\Isure-results.json
+del "%JSONFILE%" 2>nul
+
+echo --- STEP 1: Running ApigeeLint ---
+start /wait "" cmd /c "apigeelint -s \"C:\Users\sanketfarde\Downloads\Isure_rev74_2025_10_16\" -f json.js -q -w \"%JSONFILE%\""
+echo --- ApigeeLint finished, exit code = %ERRORLEVEL% ---
+
+if not exist "%JSONFILE%" (
+  echo ❌ JSON file not created. Exiting...
+  pause
+  exit /b 1
+)
+
+echo --- STEP 2: Running Node ---
 node "C:\Users\sanketfarde\ApigeeLint\apigeelint-to-excel.js"
+echo --- Node finished, exit code = %ERRORLEVEL% ---
 
-:: Step 3 - Git operations
+if not exist "C:\Users\sanketfarde\ApigeeLint\ExcelFile\Isure-results.xlsx" (
+  echo ❌ Excel file not found.
+) else (
+  echo ✅ Excel file created successfully!
+)
+
+echo --- STEP 3: Git push ---
 cd "C:\Users\sanketfarde\ApigeeLint"
 git add .
-git commit -m "Automated lint and Excel report update"
+git commit -m "Automated lint + Excel update"
 git push origin main
 
-echo ================================
-echo ✅ Successfully pushed updated lint report to GitHub!
-echo ================================
+echo --- SCRIPT DONE ---
 pause
