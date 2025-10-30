@@ -1,0 +1,54 @@
+name: ApigeeLint Automation
+
+on:
+  push:
+    branches: [ main ]
+    # Optional: only run when proxy/sharedflow folders change
+    paths:
+      - 'apiproxy/**'
+      - 'sharedflowbundle/**'
+      - '.github/workflows/apigeelint.yml'
+      - 'apigeelint-to-excel.js'
+
+jobs:
+  lint-and-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies & apigeelint
+        run: |
+          npm install
+          npm install -g apigeelint
+
+      - name: Prepare folders
+        run: mkdir -p JsonFile ExcelFile
+
+      - name: Run ApigeeLint (generate JSON)
+        run: |
+          apigeelint -s "./" -f json.js -q -w "./JsonFile/report.json"
+
+      - name: Convert JSON → Excel
+        run: node apigeelint-to-excel.js
+
+      - name: Commit and push reports
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "actions@github.com"
+          git add JsonFile/report.json ExcelFile/report.xlsx || true
+          git commit -m "ci: ApigeeLint auto report" || echo "No changes to commit"
+          git push origin HEAD:main || echo "No changes to push"
+
+      - name: Upload Excel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apigeelint-excel
+          path: ExcelFile/report.xlsx
