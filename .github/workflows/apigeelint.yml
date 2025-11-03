@@ -28,12 +28,19 @@ jobs:
           npm install -g apigeelint
           npm install exceljs
 
+        - name: Detect Bundle Folder Automatically
+        id: detect
+        run: |
+          echo "Detecting bundle folder..."
+          folder=$(find $GITHUB_WORKSPACE -maxdepth 2 -type d \( -name "apiproxy" -o -name "sharedflowbundle" \) | head -n 1)
+          echo "Found bundle folder: $folder"
+          echo "bundle_path=$folder" >> $GITHUB_ENV
+
       - name: Run ApigeeLint
         run: |
           mkdir -p JsonFile ExcelFile
-          echo "Running ApigeeLint on ${{ env.bundle_path }}/sharedflowbundle"
-          apigeelint -s "${{ env.bundle_path }}/sharedflowbundle" -f json.js -q -w "JsonFile/results.json"
-
+          echo "Running ApigeeLint on ${{ env.bundle_path }}"
+          apigeelint -s "${{ env.bundle_path }}" -f json.js -q -w "JsonFile/results.json"
 
       - name: 🧾 Convert JSON to Excel
         run: node apigeelint-to-excel.js
