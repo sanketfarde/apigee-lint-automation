@@ -1,60 +1,46 @@
-name: ApigeeLint Automation
+name: Run ApigeeLint Automatically
 
 on:
   push:
-    branches: [ main ]
-    # Optional: run only when proxy/sharedflow files change
-    paths:
-      - 'apiproxy/**'
-      - 'sharedflowbundle/**'
-      - '.github/workflows/apigeelint.yml'
-      - 'apigeelint-to-excel.js'
+    branches:
+      - main  # Runs every time you commit/push to main branch
 
 jobs:
-  lint-and-report:
+  lint:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🧰 Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: '22'
 
-      - name: 📦 Install ApigeeLint and ExcelJS
-        run: |
-          npm install -g apigeelint
-          npm install exceljs
+      - name: Install ApigeeLint
+        run: npm install -g apigeelint
 
-        - name: Detect Bundle Folder Automatically
+      - name: Detect Apigee bundle folder
         id: detect
         run: |
-          echo "Detecting bundle folder..."
+          echo "Detecting Apigee bundle..."
           folder=$(find $GITHUB_WORKSPACE -maxdepth 2 -type d \( -name "apiproxy" -o -name "sharedflowbundle" \) | head -n 1)
-          echo "Found bundle folder: $folder"
+          if [ -z "$folder" ]; then
+            echo "❌ No apiproxy/sharedflowbundle folder found!"
+            exit 1
+          fi
+          echo "✅ Found bundle: $folder"
           echo "bundle_path=$folder" >> $GITHUB_ENV
 
       - name: Run ApigeeLint
         run: |
-          mkdir -p JsonFile ExcelFile
+          mkdir -p JsonFile
           echo "Running ApigeeLint on ${{ env.bundle_path }}"
-          apigeelint -s "${{ env.bundle_path }}" -f json.js -q -w "JsonFile/results.json"
+          apigeelint -s "${{ env.bundle_path }}" -f json.js -q -w "JsonFile/lint-results.json"
 
-      - name: 🧾 Convert JSON to Excel
-        run: node apigeelint-to-excel.js
-
-      - name: 💾 Commit and push reports
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "actions@github.com"
-          git add JsonFile/report.json ExcelFile/report.xlsx || echo "No reports to add"
-          git commit -m "🤖 Auto lint + Excel report update" || echo "No changes to commit"
-          git push || echo "No push needed"
-
-      - name: 📤 Upload Excel report
+      - name: Upload Lint Report (JSON)
         uses: actions/upload-artifact@v4
         with:
-          name: apigeelint-excel-report
-          path: ExcelFile/report.xlsx
+          name: apigeelint-json-report
+          path: JsonFile/lint-results.json
