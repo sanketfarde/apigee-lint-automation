@@ -28,10 +28,12 @@ jobs:
           npm install -g apigeelint
           npm install exceljs
 
-      - name: 🧩 Run ApigeeLint
+      - name: Run ApigeeLint
         run: |
           mkdir -p JsonFile ExcelFile
-          apigeelint -s "./" -f json.js -q -w "./JsonFile/report.json"
+          echo "Running ApigeeLint on ${{ env.bundle_path }}/sharedflowbundle"
+          apigeelint -s "${{ env.bundle_path }}/sharedflowbundle" -f json.js -q -w "JsonFile/results.json"
+
 
       - name: 🧾 Convert JSON to Excel
         run: node apigeelint-to-excel.js
